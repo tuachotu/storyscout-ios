@@ -33,6 +33,7 @@ Phase 5: native playback and foreground upload implemented; durable relaunch/bac
 - All participant-access and recording action buttons use one consistent light-gray, black-text, equal-height style; paired actions divide their row evenly.
 - Native iPhone/iPad launch screen displays `StoryScout` centered and `Developed by Vikrant` near the bottom safe area on white.
 - Thirteen iOS tests still pass and the optimized Release simulator build succeeds after the UI and launch-screen changes.
+- The standalone iPhone app source is published publicly at `https://github.com/tuachotu/storyscout-ios` with `main` as the default branch.
 
 ## In progress
 
