@@ -1,0 +1,53 @@
+name: StoryScout
+options:
+  bundleIdPrefix: com.vikrantsingh
+  deploymentTarget:
+    iOS: "15.0"
+  xcodeVersion: "26.2"
+configs:
+  Debug: debug
+  Local: debug
+  Release: release
+settings:
+  base:
+    SWIFT_VERSION: "5.0"
+    DEVELOPMENT_TEAM: M848TUBDQ7
+targets:
+  StoryScout:
+    type: application
+    platform: iOS
+    sources:
+      - path: StoryScout
+        excludes:
+          - Resources/Info.plist
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.vikrantsingh.storyscout
+        INFOPLIST_FILE: StoryScout/Resources/Info.plist
+        PRODUCT_NAME: StoryScout
+        TARGETED_DEVICE_FAMILY: "1,2"
+        CODE_SIGN_STYLE: Automatic
+      configs:
+        Debug:
+          STORYSCOUT_API_BASE_URL: https://story-scout.app/api/v1/
+          STORYSCOUT_REJECT_LOOPBACK: YES
+        Local:
+          STORYSCOUT_API_BASE_URL: http://127.0.0.1:3001/api/v1
+          STORYSCOUT_REJECT_LOOPBACK: NO
+        Release:
+          STORYSCOUT_API_BASE_URL: https://story-scout.app/api/v1/
+          STORYSCOUT_REJECT_LOOPBACK: YES
+    scheme:
+      testTargets:
+        - StoryScoutTests
+  StoryScoutTests:
+    type: bundle.unit-test
+    platform: iOS
+    sources:
+      - StoryScoutTests
+    dependencies:
+      - target: StoryScout
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.vikrantsingh.storyscout.tests
+        GENERATE_INFOPLIST_FILE: YES
