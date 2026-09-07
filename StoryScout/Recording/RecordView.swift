@@ -1,18 +1,26 @@
 import SwiftUI
 
 struct RecordView: View {
+    private struct UploadedRecording {
+        let recording: Recording
+        let fileURL: URL
+    }
+
     let accessSession: AccessSession
     @StateObject private var recorder = RecordingController()
     @StateObject private var preview = AudioPreviewController()
     @State private var pendingUpload: RecordingUpload?
-    @State private var savedRecording: Recording?
+    @State private var uploadedRecording: UploadedRecording?
     @State private var isUploading = false
     @State private var uploadError: String?
+    @State private var transcriptionText: String?
+    @State private var isFetchingTranscription = false
+    @State private var transcriptionError: String?
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
-            if let savedRecording {
-                completion(savedRecording)
+            if let uploadedRecording {
+                completion(uploadedRecording)
             } else {
                 recordingContent
             }
@@ -118,30 +126,75 @@ struct RecordView: View {
         }
     }
 
-    private func completion(_ recording: Recording) -> some View {
-        VStack(alignment: .leading, spacing: 0) {
-            Text("Complete")
-                .font(.footnote)
-                .foregroundColor(.storySecondaryText)
-            Text("Recording saved")
-                .font(.system(size: 44, weight: .bold))
-                .minimumScaleFactor(0.75)
-                .padding(.top, 8)
-            Text("Your recording ID is")
-                .padding(.top, 20)
-            Text(recording.recordingId)
-                .font(.body.weight(.semibold))
-                .textSelection(.enabled)
-                .padding(.top, 4)
-            Button("Record another") {
-                preview.stop()
-                savedRecording = nil
-                pendingUpload = nil
-                uploadError = nil
-                recorder.recordAgain()
+    private func completion(_ uploaded: UploadedRecording) -> some View {
+        ScrollView {
+            VStack(alignment: .leading, spacing: 0) {
+                Text("Complete")
+                    .font(.footnote)
+                    .foregroundColor(.storySecondaryText)
+                Text("Recording saved")
+                    .font(.system(size: 44, weight: .bold))
+                    .minimumScaleFactor(0.75)
+                    .padding(.top, 8)
+                Text("Your recording ID is")
+                    .padding(.top, 20)
+                Text(uploaded.recording.recordingId)
+                    .font(.body.weight(.semibold))
+                    .textSelection(.enabled)
+                    .padding(.top, 4)
+
+                Button(preview.isPlaying ? "Stop playback" : "Play recording") {
+                    preview.toggle(url: uploaded.fileURL)
+                }
+                .buttonStyle(StoryButtonStyle())
+                .disabled(isFetchingTranscription)
+                .padding(.top, 24)
+
+                Button(isFetchingTranscription ? "Fetching transcription…" : "Fetch transcription") {
+                    Task { await fetchTranscription(recordingId: uploaded.recording.recordingId) }
+                }
+                .buttonStyle(StoryButtonStyle())
+                .disabled(isFetchingTranscription)
+                .padding(.top, 12)
+
+                if isFetchingTranscription {
+                    ProgressView()
+                        .padding(.top, 16)
+                        .accessibilityLabel("Fetching transcription")
+                }
+
+                if let transcriptionError {
+                    Text(transcriptionError)
+                        .foregroundColor(.storyError)
+                        .padding(.top, 16)
+                        .accessibilityLabel("Error: \(transcriptionError)")
+                }
+
+                if let transcriptionText {
+                    Text("Transcription")
+                        .font(.headline)
+                        .padding(.top, 24)
+                    Text(transcriptionText)
+                        .foregroundColor(.storyPrimary)
+                        .textSelection(.enabled)
+                        .fixedSize(horizontal: false, vertical: true)
+                        .padding(.top, 8)
+                }
+
+                Button("Record another") {
+                    preview.stop()
+                    uploadedRecording = nil
+                    pendingUpload = nil
+                    uploadError = nil
+                    transcriptionText = nil
+                    transcriptionError = nil
+                    recorder.recordAgain()
+                }
+                .buttonStyle(StoryButtonStyle())
+                .disabled(isFetchingTranscription)
+                .padding(.top, 24)
             }
-            .buttonStyle(StoryButtonStyle())
-            .padding(.top, 24)
+            .frame(maxWidth: .infinity, alignment: .leading)
         }
     }
 
@@ -170,12 +223,36 @@ struct RecordView: View {
                 pendingUpload = upload
             }
             try await apiClient.uploadDirect(upload.upload, fileURL: fileURL)
-            savedRecording = try await apiClient.completeRecording(
+            let recording = try await apiClient.completeRecording(
                 recordingId: upload.recording.recordingId,
                 accessToken: accessSession.accessToken
             )
+            uploadedRecording = UploadedRecording(recording: recording, fileURL: fileURL)
         } catch {
             uploadError = error.localizedDescription
+        }
+    }
+
+    private func fetchTranscription(recordingId: String) async {
+        guard !isFetchingTranscription else { return }
+        guard Date() < accessSession.expiresAt else {
+            transcriptionError = "Your session has expired. Enter your access code again to fetch the transcription."
+            return
+        }
+
+        isFetchingTranscription = true
+        transcriptionError = nil
+        preview.stop()
+        defer { isFetchingTranscription = false }
+
+        do {
+            let response = try await APIClient.configured().fetchTranscription(
+                recordingId: recordingId,
+                accessToken: accessSession.accessToken
+            )
+            transcriptionText = response.transcription.text
+        } catch {
+            transcriptionError = error.localizedDescription
         }
     }
 }

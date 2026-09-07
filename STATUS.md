@@ -1,10 +1,10 @@
 # StoryScout iPhone and iPad App Status
 
-Updated: 2026-09-06
+Updated: 2026-09-07
 
 ## Current phase
 
-Phase 5: native playback and foreground upload implemented; durable relaunch/background recovery remains in progress.
+Phase 5: post-upload playback, foreground upload, and manual transcription retrieval implemented; durable relaunch/background recovery remains in progress.
 
 ## Completed
 
@@ -34,6 +34,8 @@ Phase 5: native playback and foreground upload implemented; durable relaunch/bac
 - Native iPhone/iPad launch screen displays `StoryScout` centered and `Developed by Vikrant` near the bottom safe area on white.
 - Thirteen iOS tests still pass and the optimized Release simulator build succeeds after the UI and launch-screen changes.
 - The standalone iPhone app source is published publicly at `https://github.com/tuachotu/storyscout-ios` with `main` as the default branch.
+- On local branch `show_transrption`, the successful upload screen retains local audio playback and can manually fetch and display a selectable Unicode transcription using the authenticated recording endpoint.
+- Fifteen iOS tests pass, including transcription URL/authentication, Hindi decoding, and server not-ready error coverage; the optimized Release simulator build succeeds.
 
 ## In progress
 
@@ -59,3 +61,5 @@ Phase 5: native playback and foreground upload implemented; durable relaunch/bac
 Local implementation is approved. Git commits, remotes, pushes, production changes, external API writes, Apple account changes, TestFlight uploads, and App Store submission are not approved.
 
 The user separately approved one local initial commit and creation/push of the public `tuachotu/storyscout-ios` repository on 2026-09-06. This does not authorize any other repository, deployment, or external-resource changes.
+
+The `show_transrption` implementation and its commit, remote branch, and pull-request publication were separately approved on 2026-09-07. The pull request is not approved for merge, and no deployment is authorized.
