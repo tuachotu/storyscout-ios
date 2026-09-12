@@ -27,3 +27,12 @@ struct RecordingUpload: Codable, Equatable {
     let recording: Recording
     let upload: Instructions
 }
+
+struct RecordingTranscription: Codable, Equatable {
+    struct Transcription: Codable, Equatable {
+        let text: String
+    }
+
+    let recording: Recording
+    let transcription: Transcription
+}

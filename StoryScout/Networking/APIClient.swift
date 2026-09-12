@@ -133,6 +133,21 @@ struct APIClient {
         return try await send(request)
     }
 
+    func fetchTranscription(
+        recordingId: String,
+        accessToken: String
+    ) async throws -> RecordingTranscription {
+        var request = URLRequest(
+            url: baseURL
+                .appendingPathComponent("recordings")
+                .appendingPathComponent(recordingId)
+                .appendingPathComponent("transcription")
+        )
+        request.httpMethod = "GET"
+        request.setValue("Bearer \(accessToken)", forHTTPHeaderField: "Authorization")
+        return try await send(request)
+    }
+
     private func send<Response: Decodable>(_ request: URLRequest) async throws -> Response {
         let (data, response) = try await session.data(for: request)
         guard let httpResponse = response as? HTTPURLResponse else {

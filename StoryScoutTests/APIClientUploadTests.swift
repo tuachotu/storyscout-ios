@@ -91,6 +91,62 @@ final class APIClientUploadTests: XCTestCase {
         XCTAssertEqual(recording.storageState, .ready)
     }
 
+    func testFetchTranscriptionUsesAuthorizationAndDecodesUnicodeText() async throws {
+        MockURLProtocol.handler = { request in
+            XCTAssertEqual(
+                request.url?.absoluteString,
+                "https://example.test/api/v1/recordings/recording_123/transcription"
+            )
+            XCTAssertEqual(request.httpMethod, "GET")
+            XCTAssertEqual(request.value(forHTTPHeaderField: "Authorization"), "Bearer token-123")
+            return try Self.jsonResponse(for: request, body: Self.transcriptionResponseJSON)
+        }
+
+        let result = try await client.fetchTranscription(
+            recordingId: "recording_123",
+            accessToken: "token-123"
+        )
+
+        XCTAssertEqual(result.recording.recordingId, "recording_123")
+        XCTAssertEqual(result.transcription.text, "जीना के थे बेबी दो।\n")
+    }
+
+    func testFetchTranscriptionPreservesServerNotReadyError() async throws {
+        MockURLProtocol.handler = { request in
+            let response = HTTPURLResponse(
+                url: try XCTUnwrap(request.url),
+                statusCode: 409,
+                httpVersion: nil,
+                headerFields: ["Content-Type": "application/json"]
+            )!
+            let body = """
+            {
+              "error": {
+                "code": "TRANSCRIPTION_NOT_READY",
+                "message": "The transcription is not ready yet.",
+                "requestId": "request_123"
+              }
+            }
+            """
+            return (response, Data(body.utf8))
+        }
+
+        do {
+            _ = try await client.fetchTranscription(
+                recordingId: "recording_123",
+                accessToken: "token-123"
+            )
+            XCTFail("Expected the not-ready response to throw")
+        } catch let APIClientError.server(statusCode, code, message, requestId) {
+            XCTAssertEqual(statusCode, 409)
+            XCTAssertEqual(code, "TRANSCRIPTION_NOT_READY")
+            XCTAssertEqual(message, "The transcription is not ready yet.")
+            XCTAssertEqual(requestId, "request_123")
+        } catch {
+            XCTFail("Unexpected error: \(error)")
+        }
+    }
+
     private func temporaryAudioFile(bytes: Data) throws -> URL {
         let url = FileManager.default.temporaryDirectory
             .appendingPathComponent(UUID().uuidString)
@@ -157,6 +213,24 @@ final class APIClientUploadTests: XCTestCase {
       "originalFilename": "story.m4a",
       "contentType": "audio/mp4",
       "sizeBytes": 12
+    }
+    """
+
+    private static let transcriptionResponseJSON = """
+    {
+      "recording": {
+        "recordingId": "recording_123",
+        "participantName": "Puran",
+        "createdAt": "2026-09-07T18:01:34.261Z",
+        "completedAt": "2026-09-07T18:01:35.590Z",
+        "storageState": "ready",
+        "originalFilename": "story.m4a",
+        "contentType": "audio/mp4",
+        "sizeBytes": 12
+      },
+      "transcription": {
+        "text": "जीना के थे बेबी दो।\\n"
+      }
     }
     """
 }
